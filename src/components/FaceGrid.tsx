@@ -14,9 +14,9 @@ interface FaceGridProps {
 }
 
 const sizeMap = {
-  sm: "h-7 w-7 sm:h-8 sm:w-8",
-  md: "h-9 w-9 sm:h-10 sm:w-10",
-  lg: "h-11 w-11 sm:h-12 sm:w-12",
+  sm: "h-6 w-6 sm:h-8 sm:w-8",
+  md: "h-8 w-8 sm:h-10 sm:w-10",
+  lg: "h-10 w-10 sm:h-12 sm:w-12",
 };
 
 export function FaceGrid({

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   COLOR_META,
   type CubeStickers,
@@ -151,42 +151,65 @@ export function Cube3D({
   const gap = size / 3;
   const halfCubie = cubieSize / 2;
 
-  const [spin, setSpin] = useState<{
-    face: FaceId;
-    axis: "X" | "Y" | "Z";
-    deg: number;
-  } | null>(null);
+  const movingFace =
+    animating && activeMove ? (activeMove[0] as FaceId) : null;
+
+  const layerRef = useRef<HTMLDivElement>(null);
+  const onEndRef = useRef(onAnimationEnd);
+  onEndRef.current = onAnimationEnd;
 
   const [rot, setRot] = useState(DEFAULT_ROT);
   const [grabbing, setGrabbing] = useState(false);
   const dragging = useRef(false);
   const lastPointer = useRef({ x: 0, y: 0 });
 
-  useEffect(() => {
-    if (!animating || !activeMove) {
-      setSpin(null);
-      return;
+  // Reliable layer turn via Web Animations API (avoids CSS transition races).
+  useLayoutEffect(() => {
+    if (!animating || !activeMove || !movingFace) return;
+
+    const el = layerRef.current;
+    if (!el) {
+      const missing = window.setTimeout(() => onEndRef.current?.(), durationMs);
+      return () => window.clearTimeout(missing);
     }
 
-    const face = activeMove[0] as FaceId;
     const { axis, deg } = rotationForMove(activeMove);
+    el.getAnimations().forEach((a) => a.cancel());
 
-    setSpin({ face, axis, deg: 0 });
-    const start = requestAnimationFrame(() => {
-      setSpin({ face, axis, deg });
-    });
+    const animation = el.animate(
+      [
+        { transform: `rotate${axis}(0deg)` },
+        { transform: `rotate${axis}(${deg}deg)` },
+      ],
+      {
+        duration: durationMs,
+        easing: "cubic-bezier(0.22, 0.82, 0.2, 1)",
+        fill: "forwards",
+      },
+    );
 
-    const end = window.setTimeout(() => {
-      onAnimationEnd?.();
-    }, durationMs + 40);
+    let settled = false;
+    let fallback = 0;
+
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(fallback);
+      onEndRef.current?.();
+    };
+
+    animation.addEventListener("finish", finish);
+    // Fallback if the finish event is skipped (tab background, etc.)
+    fallback = window.setTimeout(finish, durationMs + 80);
 
     return () => {
-      cancelAnimationFrame(start);
-      window.clearTimeout(end);
+      window.clearTimeout(fallback);
+      animation.removeEventListener("finish", finish);
+      if (!settled) animation.cancel();
     };
-  }, [animating, activeMove, durationMs, onAnimationEnd]);
+  }, [animating, activeMove, movingFace, durationMs]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!interactive) return;
 
     const onMove = (event: PointerEvent) => {
@@ -215,27 +238,21 @@ export function Cube3D({
     };
   }, [interactive]);
 
-  const movingFace = spin?.face ?? null;
   const rotating = cubies.filter((c) => movingFace && isInLayer(c, movingFace));
   const staticCubies = cubies.filter(
     (c) => !movingFace || !isInLayer(c, movingFace),
   );
 
-  const layerRotation =
-    spin && spin.deg !== 0
-      ? `rotate${spin.axis}(${spin.deg}deg)`
-      : "none";
-
   const viewTransform = `rotateX(${rot.x}deg) rotateY(${rot.y}deg)`;
 
   return (
     <div
-      className={`relative mx-auto grid place-items-center ${
+      className={`relative mx-auto grid w-full max-w-full place-items-center overflow-visible ${
         interactive ? "select-none touch-none" : ""
       }`}
       style={{
-        width: size * 1.7,
-        height: size * 1.7,
+        height: Math.round(size * 1.45),
+        maxWidth: "100%",
         perspective: 1100,
         cursor: interactive ? (grabbing ? "grabbing" : "grab") : undefined,
       }}
@@ -272,15 +289,14 @@ export function Cube3D({
 
         {movingFace ? (
           <div
+            key={`${activeMove}-${movingFace}`}
+            ref={layerRef}
             style={{
               position: "absolute",
               inset: 0,
               transformStyle: "preserve-3d",
-              transform: layerRotation,
-              transition:
-                spin && spin.deg !== 0
-                  ? `transform ${durationMs}ms cubic-bezier(0.22, 0.8, 0.28, 1)`
-                  : "none",
+              transform: "rotateX(0deg)",
+              willChange: "transform",
             }}
           >
             {rotating.map((cubie) => (
@@ -298,11 +314,11 @@ export function Cube3D({
       </div>
 
       {activeMove ? (
-        <TurnBadge move={activeMove} animating={Boolean(spin && spin.deg)} />
+        <TurnBadge move={activeMove} animating={Boolean(movingFace)} />
       ) : null}
 
       {interactive ? (
-        <div className="pointer-events-none absolute bottom-2 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/10 bg-black/40 px-3 py-1 text-[10px] uppercase tracking-[0.14em] text-[var(--muted)]">
+        <div className="pointer-events-none absolute bottom-1 left-1/2 flex max-w-[95%] -translate-x-1/2 flex-wrap items-center justify-center gap-2 rounded-full border border-white/10 bg-black/40 px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-[var(--muted)] sm:bottom-2 sm:px-3">
           Drag untuk putar
           <button
             type="button"
@@ -383,7 +399,7 @@ function TurnBadge({ move, animating }: { move: MoveToken; animating: boolean })
 
   return (
     <div
-      className={`pointer-events-none absolute right-2 top-2 flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs transition ${
+      className={`pointer-events-none absolute right-1 top-1 flex max-w-[90%] items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] transition sm:right-2 sm:top-2 sm:gap-2 sm:px-3 sm:py-1.5 sm:text-xs ${
         animating
           ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]"
           : "border-white/10 bg-black/35 text-[var(--ink-soft)]"
@@ -393,7 +409,7 @@ function TurnBadge({ move, animating }: { move: MoveToken; animating: boolean })
       <span aria-hidden className={animating ? "animate-spin-slow" : ""}>
         {prime ? "↺" : "↻"}
       </span>
-      <span>
+      <span className="truncate">
         sisi {face} · {label}
       </span>
     </div>

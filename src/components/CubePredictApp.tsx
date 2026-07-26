@@ -119,9 +119,9 @@ export function CubePredictApp() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
+    <div className="relative min-h-screen overflow-x-hidden">
       <div className="atmosphere" aria-hidden />
-      <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-5 sm:px-8">
+      <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 sm:px-8 sm:py-5">
         <div className="flex items-center gap-3">
           <div className="grid h-9 w-9 place-items-center rounded-lg bg-[var(--accent)] font-display text-sm font-bold text-[#081018]">
             CP
@@ -135,10 +135,10 @@ export function CubePredictApp() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
           <a
             href="#memory"
-            className="hidden text-sm text-[var(--ink-soft)] transition hover:text-[var(--ink)] sm:inline"
+            className="text-sm text-[var(--ink-soft)] transition hover:text-[var(--ink)]"
           >
             Memory
           </a>
@@ -151,20 +151,20 @@ export function CubePredictApp() {
         </div>
       </header>
 
-      <main className="relative z-10 mx-auto w-full max-w-6xl px-5 pb-20 sm:px-8">
+      <main className="relative z-10 mx-auto w-full max-w-6xl px-4 pb-16 sm:px-8 sm:pb-20">
         {stage !== "solution" ? (
-          <section className="hero-section grid items-center gap-10 pb-10 pt-6 lg:grid-cols-[1.1fr_0.9fr] lg:pb-14 lg:pt-10">
-            <div>
+          <section className="hero-section grid items-center gap-6 pb-8 pt-4 sm:gap-10 sm:pb-10 sm:pt-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:pb-14 lg:pt-10">
+            <div className="min-w-0">
               <p className="eyebrow">Prediksi penyelesaian Rubik</p>
-              <h1 className="font-display mt-3 max-w-xl text-5xl leading-[0.95] tracking-tight text-[var(--ink)] sm:text-6xl lg:text-7xl">
+              <h1 className="font-display mt-3 max-w-xl text-4xl leading-[0.95] tracking-tight text-[var(--ink)] sm:text-5xl md:text-6xl lg:text-7xl">
                 CubePredict
               </h1>
-              <p className="mt-5 max-w-md text-base leading-relaxed text-[var(--ink-soft)] sm:text-lg">
+              <p className="mt-4 max-w-md text-sm leading-relaxed text-[var(--ink-soft)] sm:mt-5 sm:text-base lg:text-lg">
                 Scan warna lewat kamera atau cat manual, lalu dapatkan solusi
                 step-by-step. Setiap prediksi tersimpan sebagai memory di
                 perangkatmu.
               </p>
-              <div className="mt-8 flex flex-wrap gap-3">
+              <div className="mt-6 flex flex-wrap gap-2 sm:mt-8 sm:gap-3">
                 <button
                   type="button"
                   className="btn-primary"
@@ -190,8 +190,8 @@ export function CubePredictApp() {
                 </button>
               </div>
             </div>
-            <div className="panel overflow-hidden p-4 sm:p-6">
-              <Cube3D cube={cube} size={240} interactive />
+            <div className="panel min-w-0 overflow-hidden p-3 sm:p-6">
+              <Cube3D cube={cube} size={220} interactive />
             </div>
           </section>
         ) : null}
@@ -295,8 +295,8 @@ export function CubePredictApp() {
                 </div>
               </div>
 
-              <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-                <div className="panel p-5 sm:p-6">
+              <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+                <div className="panel min-w-0 p-4 sm:p-6">
                   <p className="eyebrow mb-4">Net rubik</p>
                   <CubeNet
                     cube={cube}
@@ -307,8 +307,8 @@ export function CubePredictApp() {
                   />
                 </div>
 
-                <div className="space-y-6">
-                  <div className="panel p-5 sm:p-6">
+                <div className="min-w-0 space-y-6">
+                  <div className="panel p-4 sm:p-6">
                     <p className="eyebrow mb-4">Editor sisi aktif</p>
                     <div className="mb-4 flex flex-wrap gap-2">
                       {FACES.map((face) => (
@@ -339,14 +339,14 @@ export function CubePredictApp() {
                     </p>
                   </div>
 
-                  <div className="panel p-5 sm:p-6">
+                  <div className="panel min-w-0 p-4 sm:p-6">
                     <div className="mb-3 flex items-center justify-between gap-2">
                       <p className="eyebrow">Preview 3D</p>
                       <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--muted)]">
                         Drag untuk putar
                       </p>
                     </div>
-                    <Cube3D cube={cube} size={200} interactive />
+                    <Cube3D cube={cube} size={190} interactive />
                   </div>
                 </div>
               </div>
@@ -368,7 +368,11 @@ export function CubePredictApp() {
                     ? "Konfigurasi warna siap diprediksi dan disimpan ke memory."
                     : "Lengkapi / koreksi warna hingga tiap warna tepat 9 stiker."}
                 </p>
-                <button type="button" className="btn-primary" onClick={handleSolve}>
+                <button
+                  type="button"
+                  className="btn-primary w-full sm:w-auto"
+                  onClick={handleSolve}
+                >
                   Prediksi & simpan
                 </button>
               </div>
