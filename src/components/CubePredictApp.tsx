@@ -191,7 +191,7 @@ export function CubePredictApp() {
               </div>
             </div>
             <div className="panel overflow-hidden p-4 sm:p-6">
-              <Cube3D cube={cube} size={240} />
+              <Cube3D cube={cube} size={240} interactive />
             </div>
           </section>
         ) : null}
@@ -235,56 +235,63 @@ export function CubePredictApp() {
           {stage === "input" ? (
             <div className="space-y-6">
               <div className="panel p-5 sm:p-7">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                  <div>
-                    <p className="eyebrow">Langkah 1</p>
-                    <h2 className="font-display mt-1 text-2xl text-[var(--ink)] sm:text-3xl">
-                      Scan kamera atau cat warna
-                    </h2>
-                    <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--muted)]">
-                      Orientasikan rubik: putih di atas, hijau di depan. Scan
-                      tiap sisi lewat kamera, atau koreksi manual. Pusat tiap
-                      sisi terkunci sesuai orientasi.
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      className="btn-primary"
-                      onClick={() => setCameraOpen(true)}
-                    >
-                      Buka kamera
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-secondary"
-                      onClick={() => {
-                        setCube(createSolvedCube());
-                        setInputSource("manual");
-                        setLastMemoryId(null);
-                      }}
-                    >
-                      Reset solved
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-secondary"
-                      onClick={() => {
-                        setCube(scrambleStickers());
-                        setInputSource("scramble");
-                        setLastMemoryId(null);
-                      }}
-                    >
-                      Acak
-                    </button>
-                  </div>
-                </div>
+                <div className="flex flex-col gap-5">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="min-w-0 max-w-2xl">
+                      <p className="eyebrow">Langkah 1</p>
+                      <h2 className="font-display mt-1 text-2xl text-[var(--ink)] sm:text-3xl">
+                        Scan kamera atau cat warna
+                      </h2>
+                      <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
+                        Orientasikan rubik: putih di atas, hijau di depan. Scan
+                        tiap sisi lewat kamera, atau koreksi manual. Pusat tiap
+                        sisi terkunci sesuai orientasi.
+                      </p>
+                    </div>
 
-                <div className="mt-6">
-                  <p className="mb-3 text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
-                    Palet koreksi manual
-                  </p>
-                  <ColorPalette selected={selectedColor} onSelect={setSelectedColor} />
+                    <div
+                      className="grid w-full shrink-0 grid-cols-1 gap-2 sm:grid-cols-3 lg:w-auto lg:min-w-[22rem]"
+                      role="group"
+                      aria-label="Aksi input warna"
+                    >
+                      <button
+                        type="button"
+                        className="btn-primary w-full justify-center whitespace-nowrap"
+                        onClick={() => setCameraOpen(true)}
+                      >
+                        Buka kamera
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-secondary w-full justify-center whitespace-nowrap"
+                        onClick={() => {
+                          setCube(createSolvedCube());
+                          setInputSource("manual");
+                          setLastMemoryId(null);
+                        }}
+                      >
+                        Reset solved
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-secondary w-full justify-center whitespace-nowrap"
+                        onClick={() => {
+                          setCube(scrambleStickers());
+                          setInputSource("scramble");
+                          setLastMemoryId(null);
+                        }}
+                      >
+                        Acak
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="mb-3 text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
+                      Palet koreksi manual
+                    </p>
+                    <ColorPalette selected={selectedColor} onSelect={setSelectedColor} />
+                  </div>
                 </div>
               </div>
 
@@ -333,8 +340,13 @@ export function CubePredictApp() {
                   </div>
 
                   <div className="panel p-5 sm:p-6">
-                    <p className="eyebrow mb-3">Preview 3D</p>
-                    <Cube3D cube={cube} size={200} />
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                      <p className="eyebrow">Preview 3D</p>
+                      <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--muted)]">
+                        Drag untuk putar
+                      </p>
+                    </div>
+                    <Cube3D cube={cube} size={200} interactive />
                   </div>
                 </div>
               </div>

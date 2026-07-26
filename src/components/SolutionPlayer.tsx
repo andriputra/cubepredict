@@ -127,6 +127,7 @@ export function SolutionPlayer({
           animating={animating}
           durationMs={ANIM_MS}
           onAnimationEnd={finishAnimation}
+          interactive
         />
 
         <div className="mt-6 rounded-2xl border border-white/8 bg-[var(--panel-deep)] p-4 text-center">

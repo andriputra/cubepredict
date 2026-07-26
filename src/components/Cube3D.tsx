@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   COLOR_META,
   type CubeStickers,
@@ -16,6 +16,8 @@ interface Cube3DProps {
   size?: number;
   durationMs?: number;
   onAnimationEnd?: () => void;
+  /** Enable click-drag / touch to orbit the cube. */
+  interactive?: boolean;
 }
 
 type Vec3 = { x: number; y: number; z: number };
@@ -28,7 +30,7 @@ interface CubieData {
   stickers: Partial<Record<FaceId, StickerColor>>;
 }
 
-const BASE_TILT = "rotateX(-24deg) rotateY(-34deg)";
+const DEFAULT_ROT = { x: -24, y: -34 };
 const AXES: Array<-1 | 0 | 1> = [-1, 0, 1];
 
 function stickerAt(
@@ -42,12 +44,10 @@ function stickerAt(
   switch (face) {
     case "U":
       if (y !== 1) return null;
-      // U1 toward B (z=-1), U7 toward F (z=1)
       index = (z + 1) * 3 + (x + 1);
       break;
     case "D":
       if (y !== -1) return null;
-      // D1 toward F (z=1), D7 toward B (z=-1)
       index = (1 - z) * 3 + (x + 1);
       break;
     case "F":
@@ -103,10 +103,6 @@ function isInLayer(cubie: CubieData, face: FaceId): boolean {
   return cubie[layerAxis(face)] === layerValue(face);
 }
 
-/**
- * Degrees of CSS rotation for a CW turn as viewed looking at that face.
- * Double turns use ±180; primes invert the CW amount.
- */
 function rotationForMove(move: MoveToken): { axis: "X" | "Y" | "Z"; deg: number } {
   const face = move[0] as FaceId;
   const turns = move.includes("2") ? 2 : 1;
@@ -148,6 +144,7 @@ export function Cube3D({
   size = 220,
   durationMs = 700,
   onAnimationEnd,
+  interactive = false,
 }: Cube3DProps) {
   const cubies = useMemo(() => buildCubies(cube), [cube]);
   const cubieSize = size / 3.15;
@@ -160,6 +157,11 @@ export function Cube3D({
     deg: number;
   } | null>(null);
 
+  const [rot, setRot] = useState(DEFAULT_ROT);
+  const [grabbing, setGrabbing] = useState(false);
+  const dragging = useRef(false);
+  const lastPointer = useRef({ x: 0, y: 0 });
+
   useEffect(() => {
     if (!animating || !activeMove) {
       setSpin(null);
@@ -169,7 +171,6 @@ export function Cube3D({
     const face = activeMove[0] as FaceId;
     const { axis, deg } = rotationForMove(activeMove);
 
-    // Reset to 0 first so CSS transition always runs from identity.
     setSpin({ face, axis, deg: 0 });
     const start = requestAnimationFrame(() => {
       setSpin({ face, axis, deg });
@@ -185,26 +186,76 @@ export function Cube3D({
     };
   }, [animating, activeMove, durationMs, onAnimationEnd]);
 
+  useEffect(() => {
+    if (!interactive) return;
+
+    const onMove = (event: PointerEvent) => {
+      if (!dragging.current) return;
+      const dx = event.clientX - lastPointer.current.x;
+      const dy = event.clientY - lastPointer.current.y;
+      lastPointer.current = { x: event.clientX, y: event.clientY };
+      setRot((prev) => ({
+        x: Math.max(-78, Math.min(78, prev.x - dy * 0.45)),
+        y: prev.y + dx * 0.45,
+      }));
+    };
+
+    const onUp = () => {
+      dragging.current = false;
+      setGrabbing(false);
+    };
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+    };
+  }, [interactive]);
+
   const movingFace = spin?.face ?? null;
   const rotating = cubies.filter((c) => movingFace && isInLayer(c, movingFace));
-  const staticCubies = cubies.filter((c) => !movingFace || !isInLayer(c, movingFace));
+  const staticCubies = cubies.filter(
+    (c) => !movingFace || !isInLayer(c, movingFace),
+  );
 
   const layerRotation =
     spin && spin.deg !== 0
       ? `rotate${spin.axis}(${spin.deg}deg)`
       : "none";
 
+  const viewTransform = `rotateX(${rot.x}deg) rotateY(${rot.y}deg)`;
+
   return (
     <div
-      className="relative mx-auto grid place-items-center"
-      style={{ width: size * 1.7, height: size * 1.7, perspective: 1100 }}
+      className={`relative mx-auto grid place-items-center ${
+        interactive ? "select-none touch-none" : ""
+      }`}
+      style={{
+        width: size * 1.7,
+        height: size * 1.7,
+        perspective: 1100,
+        cursor: interactive ? (grabbing ? "grabbing" : "grab") : undefined,
+      }}
+      onPointerDown={
+        interactive
+          ? (event) => {
+              if (event.button !== 0) return;
+              dragging.current = true;
+              setGrabbing(true);
+              lastPointer.current = { x: event.clientX, y: event.clientY };
+            }
+          : undefined
+      }
     >
       <div
         className="relative"
         style={{
           width: size,
           height: size,
-          transform: BASE_TILT,
+          transform: viewTransform,
           transformStyle: "preserve-3d",
         }}
       >
@@ -246,8 +297,28 @@ export function Cube3D({
         ) : null}
       </div>
 
-      {activeMove ? <TurnBadge move={activeMove} animating={Boolean(spin && spin.deg)} /> : null}
-      <div className="pointer-events-none absolute inset-x-10 bottom-3 h-8 rounded-full bg-black/35 blur-xl" />
+      {activeMove ? (
+        <TurnBadge move={activeMove} animating={Boolean(spin && spin.deg)} />
+      ) : null}
+
+      {interactive ? (
+        <div className="pointer-events-none absolute bottom-2 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/10 bg-black/40 px-3 py-1 text-[10px] uppercase tracking-[0.14em] text-[var(--muted)]">
+          Drag untuk putar
+          <button
+            type="button"
+            className="pointer-events-auto rounded-full border border-white/15 px-2 py-0.5 text-[10px] tracking-normal text-[var(--ink-soft)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
+            onClick={(event) => {
+              event.stopPropagation();
+              setRot(DEFAULT_ROT);
+            }}
+            onPointerDown={(event) => event.stopPropagation()}
+          >
+            Reset view
+          </button>
+        </div>
+      ) : (
+        <div className="pointer-events-none absolute inset-x-10 bottom-3 h-8 rounded-full bg-black/35 blur-xl" />
+      )}
     </div>
   );
 }
@@ -296,7 +367,6 @@ function Cubie({
           />
         );
       })}
-      {/* Inner plastic core so gaps don't show empty */}
       <div
         className="absolute inset-[8%] rounded-[3px] bg-[#0b121a]"
         style={{ transform: "translateZ(0px)", transformStyle: "preserve-3d" }}
@@ -309,11 +379,7 @@ function TurnBadge({ move, animating }: { move: MoveToken; animating: boolean })
   const face = move[0] as FaceId;
   const prime = move.includes("'");
   const double = move.includes("2");
-  const label = double
-    ? "180°"
-    : prime
-      ? "90° ↺"
-      : "90° ↻";
+  const label = double ? "180°" : prime ? "90° ↺" : "90° ↻";
 
   return (
     <div
