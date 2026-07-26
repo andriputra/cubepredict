@@ -160,9 +160,9 @@ export function CubePredictApp() {
                 CubePredict
               </h1>
               <p className="mt-4 max-w-md text-sm leading-relaxed text-[var(--ink-soft)] sm:mt-5 sm:text-base lg:text-lg">
-                Scan warna lewat kamera atau cat manual, lalu dapatkan solusi
-                step-by-step. Setiap prediksi tersimpan sebagai memory di
-                perangkatmu.
+                Scan warna lewat kamera ber-AI atau cat manual, lalu dapatkan
+                solusi step-by-step dengan AI Coach. Setiap prediksi tersimpan
+                sebagai memory di perangkatmu.
               </p>
               <div className="mt-6 flex flex-wrap gap-2 sm:mt-8 sm:gap-3">
                 <button
@@ -392,9 +392,12 @@ export function CubePredictApp() {
         open={cameraOpen}
         onClose={() => setCameraOpen(false)}
         onApplyFace={applyScannedFace}
-        onComplete={() => {
+        onComplete={({ cube }) => {
+          setCube(cube);
           setInputSource("camera");
           setLastMemoryId(null);
+          setErrors([]);
+          setStage("input");
         }}
       />
     </div>

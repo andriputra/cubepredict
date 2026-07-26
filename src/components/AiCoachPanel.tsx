@@ -28,18 +28,22 @@ export function AiCoachPanel({
   const [tip, setTip] = useState<AiTip | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const previousKey = previousMoves.join(" ");
+
   useEffect(() => {
     if (!move || step >= total) {
       setTip(null);
       return;
     }
 
+    const previous = previousKey ? (previousKey.split(" ") as MoveToken[]) : [];
+
     const local = explainMoveLocal({
       move,
       step,
       total,
       algorithm,
-      previousMoves,
+      previousMoves: previous,
     });
     setTip(local);
 
@@ -56,7 +60,7 @@ export function AiCoachPanel({
             step,
             total,
             algorithm,
-            previousMoves,
+            previousMoves: previous,
           }),
         });
         if (!res.ok) return;
@@ -72,7 +76,7 @@ export function AiCoachPanel({
     return () => {
       cancelled = true;
     };
-  }, [move, step, total, algorithm, previousMoves]);
+  }, [move, step, total, algorithm, previousKey]);
 
   if (step >= total) {
     return (
@@ -124,12 +128,7 @@ export function AiCoachPanel({
       </div>
 
       <p className="mt-3 text-[11px] leading-relaxed text-[var(--muted)]">
-        {explainOverviewLocal(
-          // overview uses full algorithm length context via previous+current hint
-          previousMoves.length + 1 === total
-            ? [...previousMoves, move]
-            : [...previousMoves, move],
-        )}
+        {explainOverviewLocal([...previousMoves, move])}
       </p>
     </div>
   );

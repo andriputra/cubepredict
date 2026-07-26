@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AiCoachPanel } from "@/components/AiCoachPanel";
 import { Cube3D } from "@/components/Cube3D";
 import { describeMove } from "@/lib/cube/engine";
 import { statesAlongSolution } from "@/lib/cube/solver";
@@ -223,6 +224,15 @@ export function SolutionPlayer({
       </div>
 
       <div className="min-w-0 space-y-4">
+        <AiCoachPanel
+          move={currentMove}
+          step={step}
+          total={total}
+          algorithm={algorithm}
+          previousMoves={moves.slice(0, step)}
+          active={animating}
+        />
+
         <div className="panel p-4 sm:p-5 lg:p-6">
           <p className="eyebrow">Algoritma</p>
           <p className="mt-2 break-words font-mono text-xs leading-6 text-[var(--ink-soft)] sm:text-sm sm:leading-7">

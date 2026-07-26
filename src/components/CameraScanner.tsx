@@ -1,18 +1,23 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { classifyFaceAi, rebalanceCubeFromSamples } from "@/lib/ai/vision";
 import {
   COLOR_META,
   FACES,
+  type CubeStickers,
   type FaceId,
   type FaceStickers,
   type StickerColor,
 } from "@/lib/cube/types";
-import { GRID_FRACTION, colorHex, sampleFaceFromFrame } from "@/lib/cube/vision";
+import {
+  GRID_FRACTION,
+  colorHex,
+  sampleFaceFromFrame,
+  type Rgb,
+} from "@/lib/cube/vision";
 
 const SCAN_ORDER: FaceId[] = ["U", "R", "F", "D", "L", "B"];
-
-/** Sampling cadence and temporal smoothing window. */
 const SAMPLE_INTERVAL_MS = 100;
 const HISTORY_LENGTH = 6;
 
@@ -35,7 +40,11 @@ interface CameraScannerProps {
   open: boolean;
   onClose: () => void;
   onApplyFace: (face: FaceId, stickers: FaceStickers) => void;
-  onComplete: () => void;
+  /** Called after all faces captured; may include AI-rebalanced cube. */
+  onComplete: (result: {
+    cube: CubeStickers;
+    source: "local-ai" | "openai";
+  }) => void;
 }
 
 export function CameraScanner({
@@ -50,6 +59,8 @@ export function CameraScanner({
   const historyRef = useRef<StickerColor[][]>(
     Array.from({ length: 9 }, () => []),
   );
+  const latestRgbRef = useRef<Rgb[] | null>(null);
+  const samplesRef = useRef<Partial<Record<FaceId, Rgb[]>>>({});
 
   const [faceIndex, setFaceIndex] = useState(0);
   const [preview, setPreview] = useState<StickerColor[]>(Array(9).fill("W"));
@@ -57,6 +68,8 @@ export function CameraScanner({
   const [captured, setCaptured] = useState<Partial<Record<FaceId, boolean>>>({});
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [capturing, setCapturing] = useState(false);
+  const [aiMode, setAiMode] = useState<"local-ai" | "openai">("local-ai");
 
   const currentFace = SCAN_ORDER[faceIndex];
   const faceMeta = FACES.find((f) => f.id === currentFace)!;
@@ -72,6 +85,8 @@ export function CameraScanner({
     let cancelled = false;
     setFaceIndex(0);
     setCaptured({});
+    samplesRef.current = {};
+    setAiMode("local-ai");
     resetHistory();
 
     async function start() {
@@ -112,7 +127,6 @@ export function CameraScanner({
     };
   }, [open, resetHistory]);
 
-  // Clear smoothing history when switching faces so old colors don't linger.
   useEffect(() => {
     resetHistory();
   }, [faceIndex, resetHistory]);
@@ -125,11 +139,12 @@ export function CameraScanner({
       const canvas = canvasRef.current;
       if (!video || !canvas || video.readyState < 2) return;
 
-      const { colors } = sampleFaceFromFrame(video, canvas);
-      colors[4] = faceMeta.center;
+      const { rgbs } = sampleFaceFromFrame(video, canvas);
+      latestRgbRef.current = rgbs;
+      const aiColors = classifyFaceAi(rgbs, faceMeta.center);
 
       const history = historyRef.current;
-      colors.forEach((color, i) => {
+      aiColors.forEach((color, i) => {
         history[i].push(color);
         if (history[i].length > HISTORY_LENGTH) history[i].shift();
       });
@@ -145,23 +160,74 @@ export function CameraScanner({
 
   if (!open) return null;
 
-  const captureFace = () => {
-    const stickers = [...preview] as FaceStickers;
-    stickers[4] = faceMeta.center;
-    onApplyFace(currentFace, stickers);
-    setCaptured((prev) => ({ ...prev, [currentFace]: true }));
+  const finishScan = (source: "local-ai" | "openai") => {
+    const cube = rebalanceCubeFromSamples(samplesRef.current);
+    onComplete({ cube, source });
+    onClose();
+  };
 
-    if (faceIndex < SCAN_ORDER.length - 1) {
-      setFaceIndex((i) => i + 1);
-    } else {
-      onComplete();
-      onClose();
+  const captureFace = async () => {
+    if (capturing) return;
+    setCapturing(true);
+
+    try {
+      let stickers = [...preview] as FaceStickers;
+      stickers[4] = faceMeta.center;
+      let source: "local-ai" | "openai" = aiMode;
+
+      const rgbs = latestRgbRef.current;
+      if (rgbs) {
+        stickers = classifyFaceAi(rgbs, faceMeta.center);
+        samplesRef.current[currentFace] = rgbs;
+      }
+
+      // Optional cloud vision refine when OPENAI_API_KEY is configured.
+      const canvas = canvasRef.current;
+      if (canvas) {
+        try {
+          const imageBase64 = canvas.toDataURL("image/jpeg", 0.85);
+          const res = await fetch("/api/ai/vision", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              imageBase64,
+              center: faceMeta.center,
+              face: currentFace,
+            }),
+          });
+          if (res.ok) {
+            const data = (await res.json()) as {
+              colors?: StickerColor[];
+              source?: string;
+            };
+            if (data.colors?.length === 9) {
+              stickers = data.colors as FaceStickers;
+              stickers[4] = faceMeta.center;
+              source = "openai";
+              setAiMode("openai");
+            }
+          }
+        } catch {
+          // Keep on-device AI result.
+        }
+      }
+
+      setPreview(stickers);
+      onApplyFace(currentFace, stickers);
+      setCaptured((prev) => ({ ...prev, [currentFace]: true }));
+
+      if (faceIndex < SCAN_ORDER.length - 1) {
+        setFaceIndex((i) => i + 1);
+      } else {
+        finishScan(source);
+      }
+    } finally {
+      setCapturing(false);
     }
   };
 
   const goPrev = () => setFaceIndex((i) => Math.max(0, i - 1));
   const goNext = () => setFaceIndex((i) => Math.min(SCAN_ORDER.length - 1, i + 1));
-
   const gridPercent = `${GRID_FRACTION * 100}%`;
 
   return (
@@ -169,14 +235,15 @@ export function CameraScanner({
       <div className="panel max-h-[95vh] w-full max-w-3xl overflow-y-auto p-4 sm:p-6">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="eyebrow">Scan kamera</p>
+            <p className="eyebrow">Scan kamera · AI</p>
             <h2 className="font-display mt-1 text-2xl text-[var(--ink)]">
               Sisi {faceMeta.label} ({currentFace})
             </h2>
             <p className="mt-2 text-sm text-[var(--muted)]">
-              Arahkan sisi {faceMeta.label.toLowerCase()} ke kamera. Sejajarkan
-              stiker dengan grid 3×3. Pusat harus{" "}
-              {COLOR_META[faceMeta.center].label.toLowerCase()}.
+              Arahkan sisi {faceMeta.label.toLowerCase()} ke kamera. Deteksi
+              memakai AI on-device
+              {aiMode === "openai" ? " + OpenAI Vision" : ""}
+              . Pusat harus {COLOR_META[faceMeta.center].label.toLowerCase()}.
             </p>
           </div>
           <button type="button" className="btn-secondary !px-3 !py-2" onClick={onClose}>
@@ -228,7 +295,8 @@ export function CameraScanner({
             <div className="space-y-4">
               <div>
                 <p className="mb-2 text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
-                  Deteksi live {stable ? "· stabil" : "· menstabilkan…"}
+                  AI deteksi {stable ? "· stabil" : "· menstabilkan…"}
+                  {capturing ? " · memproses…" : ""}
                 </p>
                 <div className="grid grid-cols-3 gap-1.5 rounded-xl bg-[var(--panel-deep)] p-2">
                   {preview.map((color, i) => (
@@ -271,9 +339,9 @@ export function CameraScanner({
               </div>
 
               <div className="rounded-xl border border-white/8 bg-white/[0.03] p-3 text-xs leading-relaxed text-[var(--muted)]">
-                Tip: isi grid sampai tepi stiker, cahaya merata, tunggu status
-                “stabil” sebelum capture. Setelah capture, kamu masih bisa
-                koreksi manual di net.
+                AI on-device mengklasifikasi warna + menyeimbangkan 9 stiker per
+                warna di akhir scan. Jika `OPENAI_API_KEY` ada, tiap sisi bisa
+                diverifikasi OpenAI Vision.
               </div>
 
               <div className="flex flex-wrap gap-2">
@@ -281,20 +349,27 @@ export function CameraScanner({
                   type="button"
                   className="btn-secondary"
                   onClick={goPrev}
-                  disabled={faceIndex === 0}
+                  disabled={faceIndex === 0 || capturing}
                 >
                   Sisi sebelumnya
                 </button>
-                <button type="button" className="btn-primary" onClick={captureFace}>
-                  {faceIndex === SCAN_ORDER.length - 1
-                    ? "Capture & selesai"
-                    : "Capture sisi ini"}
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => void captureFace()}
+                  disabled={capturing}
+                >
+                  {capturing
+                    ? "AI memproses…"
+                    : faceIndex === SCAN_ORDER.length - 1
+                      ? "Capture & selesai"
+                      : "Capture sisi ini"}
                 </button>
                 <button
                   type="button"
                   className="btn-secondary"
                   onClick={goNext}
-                  disabled={faceIndex === SCAN_ORDER.length - 1}
+                  disabled={faceIndex === SCAN_ORDER.length - 1 || capturing}
                 >
                   Lewati
                 </button>

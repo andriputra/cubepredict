@@ -14,11 +14,16 @@ Webapp prediksi penyelesaian Rubik 3×3 untuk production di Vercel.
 ## Cara kerja solver
 
 CubePredict memakai algoritma deterministik **Kociemba Two-Phase** melalui
-library `cubejs`, bukan AI atau machine learning.
+library `cubejs`, bukan AI atau machine learning, untuk menghitung gerakan.
 
-Dokumentasi lengkap tentang input state, validasi, dua phase pencarian, notasi
-gerakan, dan visualisasi tersedia di
-[docs/ALGORITMA.md](docs/ALGORITMA.md).
+Di atas itu ada **AI hybrid** untuk:
+
+- penjelasan langkah (AI Coach)
+- deteksi warna kamera (AI Vision on-device + opsional OpenAI)
+
+Dokumentasi solver: [docs/ALGORITMA.md](docs/ALGORITMA.md)
+
+Dokumentasi AI: [docs/AI.md](docs/AI.md)
 
 ## Orientasi kubus
 
