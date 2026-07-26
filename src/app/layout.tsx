@@ -25,6 +25,11 @@ export const metadata: Metadata = {
   description:
     "Webapp prediksi penyelesaian Rubik 3x3. Input warna tiap sisi, dapatkan solusi step-by-step dengan visualisasi profesional.",
   applicationName: "CubePredict",
+  icons: {
+    icon: "/logo.png",
+    shortcut: "/logo.png",
+    apple: "/logo.png",
+  },
 };
 
 export default function RootLayout({

@@ -119,22 +119,27 @@ export function CubePredictApp() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden">
-      <div className="atmosphere" aria-hidden />
+    <div className="relative flex min-h-screen flex-col overflow-x-hidden">
+      <div className="atmosphere" aria-hidden>
+        <div className="atmosphere__orb atmosphere__orb--a" />
+        <div className="atmosphere__orb atmosphere__orb--b" />
+        <div className="atmosphere__orb atmosphere__orb--c" />
+        <div className="atmosphere__orb atmosphere__orb--d" />
+        <div className="atmosphere__veil" />
+        <div className="atmosphere__grid" />
+        <div className="atmosphere__shine" />
+      </div>
       <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 sm:px-8 sm:py-5">
-        <div className="flex items-center gap-3">
-          <div className="grid h-9 w-9 place-items-center rounded-lg bg-[var(--accent)] font-display text-sm font-bold text-[#081018]">
-            CP
-          </div>
-          <div>
-            <p className="font-display text-lg leading-none tracking-tight text-[var(--ink)]">
-              CubePredict
-            </p>
-            <p className="mt-1 text-[11px] uppercase tracking-[0.2em] text-[var(--muted)]">
-              Rubik solver
-            </p>
-          </div>
-        </div>
+        <a href="/" className="flex shrink-0 items-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo.png"
+            alt="CubePredict"
+            width={220}
+            height={72}
+            className="h-12 w-auto max-w-[200px] object-contain sm:h-14 sm:max-w-[240px]"
+          />
+        </a>
         <div className="flex items-center gap-3 sm:gap-4">
           <a
             href="#memory"
@@ -387,6 +392,20 @@ export function CubePredictApp() {
           />
         </section>
       </main>
+
+      <footer className="relative z-10 mt-auto border-t border-white/8">
+        <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-2 px-4 py-6 text-center sm:flex-row sm:px-8 sm:text-left">
+          <p className="text-xs text-[var(--muted)]">
+            © 2026 CubePredict. All rights reserved.
+          </p>
+          <p className="text-xs text-[var(--ink-soft)]">
+            Developed by{" "}
+            <span className="font-medium text-[var(--accent)]">
+              Flexbox Indonesia
+            </span>
+          </p>
+        </div>
+      </footer>
 
       <CameraScanner
         open={cameraOpen}

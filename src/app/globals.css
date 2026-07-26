@@ -43,25 +43,180 @@ body {
 
 .atmosphere {
   pointer-events: none;
-  position: absolute;
+  position: fixed;
   inset: 0;
+  z-index: 0;
+  overflow: hidden;
   background:
-    radial-gradient(ellipse 80% 55% at 15% -10%, rgba(125, 255, 179, 0.16), transparent 55%),
-    radial-gradient(ellipse 60% 45% at 90% 10%, rgba(42, 98, 240, 0.18), transparent 50%),
-    radial-gradient(ellipse 50% 40% at 70% 90%, rgba(239, 122, 34, 0.1), transparent 55%),
-    linear-gradient(180deg, #0a121c 0%, #081018 45%, #070d14 100%);
+    radial-gradient(ellipse 90% 60% at 50% -20%, rgba(16, 36, 52, 0.9), transparent 55%),
+    linear-gradient(180deg, #0a121c 0%, #081018 42%, #060b12 100%);
 }
 
-.atmosphere::after {
-  content: "";
+.atmosphere__orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(64px);
+  opacity: 0.55;
+  will-change: transform, opacity;
+}
+
+.atmosphere__orb--a {
+  top: -12%;
+  left: -8%;
+  width: min(52vw, 420px);
+  height: min(52vw, 420px);
+  background: radial-gradient(circle, rgba(125, 255, 179, 0.28), transparent 68%);
+  animation: orb-float-a 22s ease-in-out infinite;
+}
+
+.atmosphere__orb--b {
+  top: 8%;
+  right: -10%;
+  width: min(48vw, 380px);
+  height: min(48vw, 380px);
+  background: radial-gradient(circle, rgba(42, 98, 240, 0.3), transparent 70%);
+  animation: orb-float-b 26s ease-in-out infinite;
+}
+
+.atmosphere__orb--c {
+  bottom: -8%;
+  left: 35%;
+  width: min(56vw, 460px);
+  height: min(56vw, 460px);
+  background: radial-gradient(circle, rgba(239, 122, 34, 0.18), transparent 72%);
+  animation: orb-float-c 30s ease-in-out infinite;
+}
+
+.atmosphere__orb--d {
+  top: 42%;
+  left: 8%;
+  width: min(36vw, 280px);
+  height: min(36vw, 280px);
+  background: radial-gradient(circle, rgba(125, 200, 255, 0.14), transparent 70%);
+  animation: orb-float-d 24s ease-in-out infinite;
+}
+
+.atmosphere__veil {
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(ellipse 50% 40% at 20% 30%, rgba(125, 255, 179, 0.08), transparent 55%),
+    radial-gradient(ellipse 45% 35% at 80% 70%, rgba(42, 98, 240, 0.1), transparent 50%);
+  animation: veil-drift 36s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+.atmosphere__grid {
   position: absolute;
   inset: 0;
-  opacity: 0.35;
+  opacity: 0.32;
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
   background-size: 48px 48px;
-  mask-image: radial-gradient(circle at center, black 35%, transparent 80%);
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, black 20%, transparent 75%);
+  animation: grid-pan 48s linear infinite;
+  will-change: background-position;
+}
+
+.atmosphere__shine {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    115deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.018) 48%,
+    transparent 62%
+  );
+  background-size: 220% 220%;
+  animation: shine-sweep 18s ease-in-out infinite;
+}
+
+@keyframes orb-float-a {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translate3d(12%, 18%, 0) scale(1.12);
+    opacity: 0.72;
+  }
+}
+
+@keyframes orb-float-b {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.45;
+  }
+  50% {
+    transform: translate3d(-16%, 14%, 0) scale(1.18);
+    opacity: 0.7;
+  }
+}
+
+@keyframes orb-float-c {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.4;
+  }
+  50% {
+    transform: translate3d(-10%, -16%, 0) scale(1.1);
+    opacity: 0.62;
+  }
+}
+
+@keyframes orb-float-d {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(0.95);
+    opacity: 0.35;
+  }
+  50% {
+    transform: translate3d(18%, -10%, 0) scale(1.2);
+    opacity: 0.55;
+  }
+}
+
+@keyframes veil-drift {
+  from {
+    transform: translate3d(-4%, -2%, 0) rotate(0deg);
+  }
+  to {
+    transform: translate3d(5%, 4%, 0) rotate(8deg);
+  }
+}
+
+@keyframes grid-pan {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 48px 48px;
+  }
+}
+
+@keyframes shine-sweep {
+  0%,
+  100% {
+    background-position: 0% 50%;
+    opacity: 0.4;
+  }
+  50% {
+    background-position: 100% 50%;
+    opacity: 0.85;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .atmosphere__orb,
+  .atmosphere__veil,
+  .atmosphere__grid,
+  .atmosphere__shine {
+    animation: none !important;
+  }
 }
 
 .panel {
