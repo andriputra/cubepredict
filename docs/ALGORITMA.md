@@ -203,11 +203,62 @@ const moves = parseMoves(algorithm);
 Implementasi production menambahkan penanganan error, cache inisialisasi, state
 loading, dan pembuatan timeline visualisasi.
 
+## Scan kamera
+
+Selain input manual, CubePredict dapat mendeteksi warna stiker dari kamera
+perangkat.
+
+Alur singkat:
+
+1. Browser meminta izin kamera (`getUserMedia`).
+2. Frame video dipotong menjadi kotak tengah, lalu di-downscale (±216 px)
+   agar pemrosesan cepat.
+3. Sampling hanya dilakukan di dalam area grid panduan 3×3 yang terlihat di
+   layar, sehingga posisi yang disejajarkan pengguna sama dengan posisi yang
+   dibaca sistem.
+4. Tiap sel diambil rata-rata RGB di area tengah stiker.
+5. Koreksi white-balance gray-world diterapkan untuk menetralkan cahaya
+   hangat/dingin.
+6. RGB dikonversi ke HSV, lalu diklasifikasi lewat rentang hue
+   (putih, kuning, merah, oranye, hijau, biru).
+7. Hasil beberapa frame terakhir digabungkan dengan voting mayoritas supaya
+   deteksi stabil dan tidak berkedip.
+8. Pusat sisi dikunci sesuai orientasi aplikasi.
+9. Hasil scan bisa dikoreksi manual sebelum prediksi.
+
+Implementasi utama:
+
+- `src/lib/cube/vision.ts` — sampling frame dan klasifikasi warna
+- `src/components/CameraScanner.tsx` — UI scan 6 sisi
+
+Akurasi bergantung pada cahaya. Cahaya merata dan posisi sejajar grid memberi
+hasil terbaik. Scan kamera bukan computer vision berbasis AI; metode yang
+dipakai adalah klasifikasi warna berbasis jarak HSV.
+
+## Memory penyelesaian
+
+Setelah prediksi berhasil, state Rubik dan algoritma solusinya disimpan di
+`localStorage` perangkat pengguna.
+
+Setiap memory berisi:
+
+- label waktu
+- sumber input (`manual`, `camera`, atau `scramble`)
+- 54 stiker
+- algoritma dan daftar gerakan
+- jumlah gerakan
+
+Memory bisa dimuat ulang untuk memutar solusi, atau dihapus. Data hanya
+tersimpan di browser lokal, bukan di server.
+
+Implementasi: `src/lib/cube/memory.ts` dan `src/components/MemoryPanel.tsx`.
+
 ## Batasan saat ini
 
 - Hanya mendukung Rubik standar 3×3.
-- Input warna masih manual; belum membaca warna dari kamera.
+- Deteksi kamera sensitif terhadap pencahayaan dan pantulan plastik.
 - Orientasi saat input harus mengikuti petunjuk aplikasi.
+- Memory tersimpan lokal di browser, bukan sinkron antar perangkat.
 - Kociemba menghasilkan solusi sangat pendek, tetapi tidak menjamin solusi
   optimal absolut.
 - Inisialisasi pertama dapat terasa lebih lama karena pruning tables dibuat di
@@ -218,6 +269,10 @@ loading, dan pembuatan timeline visualisasi.
 - `src/lib/cube/types.ts` — tipe, warna, sisi, dan notasi.
 - `src/lib/cube/engine.ts` — validasi dan konversi state.
 - `src/lib/cube/solver.ts` — inisialisasi dan pemanggilan Kociemba.
+- `src/lib/cube/vision.ts` — deteksi warna dari kamera.
+- `src/lib/cube/memory.ts` — penyimpanan memory lokal.
+- `src/components/CameraScanner.tsx` — alur scan 6 sisi.
+- `src/components/MemoryPanel.tsx` — riwayat dan muat ulang solusi.
 - `src/components/SolutionPlayer.tsx` — kontrol langkah dan timeline.
 - `src/components/Cube3D.tsx` — tampilan visual Rubik.
 

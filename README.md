@@ -5,6 +5,8 @@ Webapp prediksi penyelesaian Rubik 3×3 untuk production di Vercel.
 ## Fitur
 
 - Input warna 6 sisi rubik (net + editor sisi)
+- Scan warna lewat kamera (grid 3×3 + klasifikasi HSV)
+- Memory penyelesaian tersimpan di browser (`localStorage`)
 - Validasi konfigurasi warna
 - Solver Kociemba (hingga ~22 gerakan)
 - Visualisasi 3D step-by-step dengan play/pause/timeline

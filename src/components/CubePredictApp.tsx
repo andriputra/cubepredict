@@ -1,18 +1,22 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { CameraScanner } from "@/components/CameraScanner";
 import { ColorPalette } from "@/components/ColorPalette";
 import { Cube3D } from "@/components/Cube3D";
 import { CubeNet } from "@/components/CubeNet";
 import { FaceGrid } from "@/components/FaceGrid";
+import { MemoryPanel } from "@/components/MemoryPanel";
 import { SolutionPlayer } from "@/components/SolutionPlayer";
 import { setSticker, validateCube } from "@/lib/cube/engine";
+import { saveMemory, type MemorySource } from "@/lib/cube/memory";
 import { scrambleStickers, solveCube } from "@/lib/cube/solver";
 import {
   createSolvedCube,
   FACES,
   type CubeStickers,
   type FaceId,
+  type FaceStickers,
   type MoveToken,
   type StickerColor,
 } from "@/lib/cube/types";
@@ -29,13 +33,43 @@ export function CubePredictApp() {
   const [algorithm, setAlgorithm] = useState("");
   const [startSnapshot, setStartSnapshot] = useState<CubeStickers | null>(null);
   const [solving, setSolving] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [inputSource, setInputSource] = useState<MemorySource>("manual");
+  const [memoryKey, setMemoryKey] = useState(0);
+  const [lastMemoryId, setLastMemoryId] = useState<string | null>(null);
 
   const validation = useMemo(() => validateCube(cube), [cube]);
 
   const paint = (face: FaceId, index: number) => {
     setActiveFace(face);
+    setInputSource((prev) => (prev === "camera" ? "camera" : "manual"));
     setCube((prev) => setSticker(prev, face, index, selectedColor));
     setErrors([]);
+  };
+
+  const applyScannedFace = (face: FaceId, stickers: FaceStickers) => {
+    setInputSource("camera");
+    setActiveFace(face);
+    setCube((prev) => ({ ...prev, [face]: stickers }));
+    setErrors([]);
+  };
+
+  const persistSolution = (
+    snapshot: CubeStickers,
+    nextMoves: MoveToken[],
+    nextAlgorithm: string,
+    source: MemorySource,
+  ) => {
+    const memory = saveMemory({
+      id: lastMemoryId ?? undefined,
+      label: "",
+      source,
+      stickers: snapshot,
+      algorithm: nextAlgorithm,
+      moves: nextMoves,
+    });
+    setLastMemoryId(memory.id);
+    setMemoryKey((k) => k + 1);
   };
 
   const handleSolve = async () => {
@@ -48,6 +82,7 @@ export function CubePredictApp() {
     setSolving(true);
     setStage("solving");
     const snapshot = cube;
+    const source = inputSource;
 
     try {
       const result = await solveCube(snapshot);
@@ -60,9 +95,27 @@ export function CubePredictApp() {
       setMoves(result.moves);
       setAlgorithm(result.algorithm);
       setStage("solution");
+      persistSolution(snapshot, result.moves, result.algorithm, source);
     } finally {
       setSolving(false);
     }
+  };
+
+  const loadMemory = (memory: {
+    id: string;
+    stickers: CubeStickers;
+    moves: MoveToken[];
+    algorithm: string;
+    source: MemorySource;
+  }) => {
+    setCube(memory.stickers);
+    setStartSnapshot(memory.stickers);
+    setMoves(memory.moves);
+    setAlgorithm(memory.algorithm);
+    setInputSource(memory.source);
+    setLastMemoryId(memory.id);
+    setErrors([]);
+    setStage("solution");
   };
 
   return (
@@ -82,12 +135,20 @@ export function CubePredictApp() {
             </p>
           </div>
         </div>
-        <a
-          href="#workspace"
-          className="hidden text-sm text-[var(--ink-soft)] transition hover:text-[var(--ink)] sm:inline"
-        >
-          Mulai prediksi
-        </a>
+        <div className="flex items-center gap-4">
+          <a
+            href="#memory"
+            className="hidden text-sm text-[var(--ink-soft)] transition hover:text-[var(--ink)] sm:inline"
+          >
+            Memory
+          </a>
+          <a
+            href="#workspace"
+            className="hidden text-sm text-[var(--ink-soft)] transition hover:text-[var(--ink)] sm:inline"
+          >
+            Mulai prediksi
+          </a>
+        </div>
       </header>
 
       <main className="relative z-10 mx-auto w-full max-w-6xl px-5 pb-20 sm:px-8">
@@ -99,18 +160,28 @@ export function CubePredictApp() {
                 CubePredict
               </h1>
               <p className="mt-5 max-w-md text-base leading-relaxed text-[var(--ink-soft)] sm:text-lg">
-                Tunjukkan warna tiap sisi rubikmu, lalu dapatkan urutan gerakan
-                step-by-step dengan visualisasi yang tajam.
+                Scan warna lewat kamera atau cat manual, lalu dapatkan solusi
+                step-by-step. Setiap prediksi tersimpan sebagai memory di
+                perangkatmu.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
-                <a href="#workspace" className="btn-primary">
-                  Input warna
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => setCameraOpen(true)}
+                >
+                  Scan kamera
+                </button>
+                <a href="#workspace" className="btn-secondary">
+                  Input manual
                 </a>
                 <button
                   type="button"
                   className="btn-secondary"
                   onClick={() => {
                     setCube(scrambleStickers());
+                    setInputSource("scramble");
+                    setLastMemoryId(null);
                     setErrors([]);
                     setStage("input");
                   }}
@@ -142,17 +213,23 @@ export function CubePredictApp() {
           ) : null}
 
           {stage === "solution" && startSnapshot ? (
-            <SolutionPlayer
-              start={startSnapshot}
-              moves={moves}
-              algorithm={algorithm}
-              onReset={() => {
-                setStage("input");
-                setMoves([]);
-                setAlgorithm("");
-                setStartSnapshot(null);
-              }}
-            />
+            <div className="space-y-6">
+              <div className="rounded-2xl border border-[var(--accent)]/25 bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--ink-soft)]">
+                Solusi tersimpan ke memory perangkat
+                {inputSource === "camera" ? " (sumber: kamera)" : ""}.
+              </div>
+              <SolutionPlayer
+                start={startSnapshot}
+                moves={moves}
+                algorithm={algorithm}
+                onReset={() => {
+                  setStage("input");
+                  setMoves([]);
+                  setAlgorithm("");
+                  setStartSnapshot(null);
+                }}
+              />
+            </div>
           ) : null}
 
           {stage === "input" ? (
@@ -162,26 +239,41 @@ export function CubePredictApp() {
                   <div>
                     <p className="eyebrow">Langkah 1</p>
                     <h2 className="font-display mt-1 text-2xl text-[var(--ink)] sm:text-3xl">
-                      Cat warna setiap sisi
+                      Scan kamera atau cat warna
                     </h2>
                     <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--muted)]">
-                      Orientasikan rubik: putih di atas, hijau di depan. Pusat
-                      tiap sisi terkunci. Pilih warna, lalu ketuk stiker pada net
-                      atau editor sisi aktif.
+                      Orientasikan rubik: putih di atas, hijau di depan. Scan
+                      tiap sisi lewat kamera, atau koreksi manual. Pusat tiap
+                      sisi terkunci sesuai orientasi.
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
+                      className="btn-primary"
+                      onClick={() => setCameraOpen(true)}
+                    >
+                      Buka kamera
+                    </button>
+                    <button
+                      type="button"
                       className="btn-secondary"
-                      onClick={() => setCube(createSolvedCube())}
+                      onClick={() => {
+                        setCube(createSolvedCube());
+                        setInputSource("manual");
+                        setLastMemoryId(null);
+                      }}
                     >
                       Reset solved
                     </button>
                     <button
                       type="button"
                       className="btn-secondary"
-                      onClick={() => setCube(scrambleStickers())}
+                      onClick={() => {
+                        setCube(scrambleStickers());
+                        setInputSource("scramble");
+                        setLastMemoryId(null);
+                      }}
                     >
                       Acak
                     </button>
@@ -190,7 +282,7 @@ export function CubePredictApp() {
 
                 <div className="mt-6">
                   <p className="mb-3 text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
-                    Palet warna
+                    Palet koreksi manual
                   </p>
                   <ColorPalette selected={selectedColor} onSelect={setSelectedColor} />
                 </div>
@@ -261,17 +353,34 @@ export function CubePredictApp() {
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm text-[var(--muted)]">
                   {validation.ok
-                    ? "Konfigurasi warna siap diprediksi."
-                    : "Lengkapi warna hingga tiap warna tepat 9 stiker."}
+                    ? "Konfigurasi warna siap diprediksi dan disimpan ke memory."
+                    : "Lengkapi / koreksi warna hingga tiap warna tepat 9 stiker."}
                 </p>
                 <button type="button" className="btn-primary" onClick={handleSolve}>
-                  Prediksi penyelesaian
+                  Prediksi & simpan
                 </button>
               </div>
             </div>
           ) : null}
         </section>
+
+        <section id="memory" className="mt-10 scroll-mt-8">
+          <MemoryPanel
+            refreshKey={memoryKey}
+            onLoad={(memory) => loadMemory(memory)}
+          />
+        </section>
       </main>
+
+      <CameraScanner
+        open={cameraOpen}
+        onClose={() => setCameraOpen(false)}
+        onApplyFace={applyScannedFace}
+        onComplete={() => {
+          setInputSource("camera");
+          setLastMemoryId(null);
+        }}
+      />
     </div>
   );
 }
