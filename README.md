@@ -54,15 +54,27 @@ npm run build
 npm start
 ```
 
-## Deploy ke Vercel
+## PWA (Progressive Web App)
 
-1. Push repo ke GitHub
-2. Import project di [vercel.com](https://vercel.com)
-3. Framework: Next.js (terdeteksi otomatis)
-4. Deploy
+CubePredict bisa di-install ke HP/desktop seperti aplikasi native.
 
-Atau pakai CLI:
+Fitur PWA:
 
-```bash
-npx vercel
-```
+- Web App Manifest (`src/app/manifest.ts`)
+- Service Worker (via `@ducanh2912/next-pwa`, aktif di production)
+- Ikon install (`public/icons/`)
+- Mode `standalone` + theme gelap
+
+### Install di perangkat
+
+1. Deploy ke HTTPS (Vercel otomatis HTTPS)
+2. Buka di Chrome/Edge/Safari
+3. Pilih **Install app** / **Add to Home Screen**
+
+### Catatan teknis
+
+- `npm run build` memakai `--webpack` karena next-pwa membutuhkan webpack plugin
+- Service worker **dimatikan di development** agar hot reload tetap nyaman
+- Regenerate ikon dari logo: `npm run icons`
+
+Dokumentasi singkat: [docs/PWA.md](docs/PWA.md)

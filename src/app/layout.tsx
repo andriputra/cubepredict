@@ -1,6 +1,11 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Fraunces, Manrope, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
+
+const APP_NAME = "CubePredict";
+const APP_TITLE = "CubePredict — Prediksi Penyelesaian Rubik";
+const APP_DESCRIPTION =
+  "Webapp prediksi penyelesaian Rubik 3x3. Scan kamera atau input warna, dapatkan solusi step-by-step dengan AI Coach. Bisa di-install sebagai PWA.";
 
 const display = Fraunces({
   variable: "--font-display",
@@ -21,15 +26,52 @@ const mono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CubePredict — Prediksi Penyelesaian Rubik",
-  description:
-    "Webapp prediksi penyelesaian Rubik 3x3. Input warna tiap sisi, dapatkan solusi step-by-step dengan visualisasi profesional.",
-  applicationName: "CubePredict",
-  icons: {
-    icon: "/logo.png",
-    shortcut: "/logo.png",
-    apple: "/logo.png",
+  applicationName: APP_NAME,
+  title: {
+    default: APP_TITLE,
+    template: `%s · ${APP_NAME}`,
   },
+  description: APP_DESCRIPTION,
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: APP_NAME,
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  icons: {
+    icon: [
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],
+    shortcut: ["/icons/icon-192.png"],
+  },
+  openGraph: {
+    type: "website",
+    siteName: APP_NAME,
+    title: APP_TITLE,
+    description: APP_DESCRIPTION,
+  },
+  twitter: {
+    card: "summary",
+    title: APP_TITLE,
+    description: APP_DESCRIPTION,
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#081018" },
+    { media: "(prefers-color-scheme: light)", color: "#081018" },
+  ],
+  colorScheme: "dark",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

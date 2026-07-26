@@ -231,151 +231,194 @@ export function CameraScanner({
   const gridPercent = `${GRID_FRACTION * 100}%`;
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-end bg-black/70 p-3 backdrop-blur-sm sm:place-items-center sm:p-6">
-      <div className="panel max-h-[95vh] w-full max-w-3xl overflow-y-auto p-4 sm:p-6">
-        <div className="flex items-start justify-between gap-3">
-          <div>
+    <div className="fixed inset-0 z-50 grid place-items-end bg-black/70 p-0 backdrop-blur-sm sm:place-items-center sm:p-6">
+      <div className="panel flex max-h-[100dvh] w-full max-w-3xl flex-col overflow-hidden rounded-none border-x-0 border-b-0 p-0 sm:max-h-[95vh] sm:rounded-[1.35rem] sm:border">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-white/8 px-4 py-3 sm:px-6 sm:py-4">
+          <div className="min-w-0 pr-2">
             <p className="eyebrow">Scan kamera · AI</p>
-            <h2 className="font-display mt-1 text-2xl text-[var(--ink)]">
+            <h2 className="font-display mt-1 text-xl text-[var(--ink)] sm:text-2xl">
               Sisi {faceMeta.label} ({currentFace})
             </h2>
-            <p className="mt-2 text-sm text-[var(--muted)]">
+            <p className="mt-1 text-xs leading-relaxed text-[var(--muted)] sm:mt-2 sm:text-sm">
               Arahkan sisi {faceMeta.label.toLowerCase()} ke kamera. Deteksi
               memakai AI on-device
               {aiMode === "openai" ? " + OpenAI Vision" : ""}
               . Pusat harus {COLOR_META[faceMeta.center].label.toLowerCase()}.
             </p>
           </div>
-          <button type="button" className="btn-secondary !px-3 !py-2" onClick={onClose}>
+          <button type="button" className="btn-secondary shrink-0 !px-3 !py-2" onClick={onClose}>
             Tutup
           </button>
         </div>
 
         {error ? (
-          <div className="mt-4 rounded-xl border border-red-400/30 bg-red-500/10 p-4 text-sm text-red-100">
+          <div className="m-4 rounded-xl border border-red-400/30 bg-red-500/10 p-4 text-sm text-red-100 sm:m-6">
             {error}
           </div>
         ) : (
-          <div className="mt-4 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-            <div className="relative aspect-square overflow-hidden rounded-2xl border border-white/10 bg-black">
-              <video
-                ref={videoRef}
-                playsInline
-                muted
-                className="absolute inset-0 h-full w-full object-cover"
-              />
-              <div className="pointer-events-none absolute inset-0 grid place-items-center">
-                <div
-                  className="relative"
-                  style={{ width: gridPercent, height: gridPercent }}
-                >
-                  <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 gap-1.5">
-                    {preview.map((color, i) => (
-                      <div
-                        key={i}
-                        className="rounded-md border border-white/60"
-                        style={{
-                          boxShadow: `inset 0 0 0 3px ${colorHex(color)}aa`,
-                          background:
-                            i === 4 ? `${colorHex(faceMeta.center)}33` : "transparent",
-                        }}
-                      />
-                    ))}
-                  </div>
-                  <div
-                    className={`absolute inset-0 rounded-lg border-2 transition-colors ${
-                      stable ? "border-[var(--accent)]" : "border-white/50"
-                    }`}
+          <>
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
+              <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+                {/* Camera preview */}
+                <div className="relative mx-auto aspect-square w-full max-w-md overflow-hidden rounded-2xl border border-white/10 bg-black lg:max-w-none">
+                  <video
+                    ref={videoRef}
+                    playsInline
+                    muted
+                    className="absolute inset-0 h-full w-full object-cover"
                   />
+                  <div className="pointer-events-none absolute inset-0 grid place-items-center">
+                    <div
+                      className="relative"
+                      style={{ width: gridPercent, height: gridPercent }}
+                    >
+                      <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 gap-1.5">
+                        {preview.map((color, i) => (
+                          <div
+                            key={i}
+                            className="rounded-md border border-white/60"
+                            style={{
+                              boxShadow: `inset 0 0 0 3px ${colorHex(color)}aa`,
+                              background:
+                                i === 4
+                                  ? `${colorHex(faceMeta.center)}33`
+                                  : "transparent",
+                            }}
+                          />
+                        ))}
+                      </div>
+                      <div
+                        className={`absolute inset-0 rounded-lg border-2 transition-colors ${
+                          stable ? "border-[var(--accent)]" : "border-white/50"
+                        }`}
+                      />
+                    </div>
+                  </div>
+                  <canvas ref={canvasRef} className="hidden" />
+                </div>
+
+                <div className="space-y-4 pb-4 lg:pb-0">
+                  <div>
+                    <p className="mb-2 text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
+                      AI deteksi {stable ? "· stabil" : "· menstabilkan…"}
+                      {capturing ? " · memproses…" : ""}
+                    </p>
+                    <div className="grid grid-cols-3 gap-1.5 rounded-xl bg-[var(--panel-deep)] p-2">
+                      {preview.map((color, i) => (
+                        <div
+                          key={i}
+                          className="aspect-square rounded-md"
+                          style={{
+                            background: colorHex(i === 4 ? faceMeta.center : color),
+                            boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.25)",
+                          }}
+                          title={COLOR_META[i === 4 ? faceMeta.center : color].label}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    {SCAN_ORDER.map((face, index) => {
+                      const meta = FACES.find((f) => f.id === face)!;
+                      const done = Boolean(captured[face]);
+                      const active = index === faceIndex;
+                      return (
+                        <button
+                          key={face}
+                          type="button"
+                          onClick={() => setFaceIndex(index)}
+                          className={`rounded-full border px-2.5 py-1 text-[11px] ${
+                            active
+                              ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--ink)]"
+                              : done
+                                ? "border-white/20 text-[var(--accent)]"
+                                : "border-white/10 text-[var(--muted)]"
+                          }`}
+                        >
+                          {meta.short}
+                          {done ? " ✓" : ""}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="rounded-xl border border-white/8 bg-white/[0.03] p-3 text-xs leading-relaxed text-[var(--muted)]">
+                    Tip: isi grid sampai tepi stiker, tunggu “stabil”, lalu tekan
+                    Capture. AI menyeimbangkan warna di akhir scan.
+                  </div>
+
+                  {/* Desktop controls stay in sidebar */}
+                  <div className="hidden flex-wrap gap-2 lg:flex">
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={goPrev}
+                      disabled={faceIndex === 0 || capturing}
+                    >
+                      Sisi sebelumnya
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      onClick={() => void captureFace()}
+                      disabled={capturing}
+                    >
+                      {capturing
+                        ? "AI memproses…"
+                        : faceIndex === SCAN_ORDER.length - 1
+                          ? "Capture & selesai"
+                          : "Capture sisi ini"}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={goNext}
+                      disabled={faceIndex === SCAN_ORDER.length - 1 || capturing}
+                    >
+                      Lewati
+                    </button>
+                  </div>
                 </div>
               </div>
-              <canvas ref={canvasRef} className="hidden" />
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <p className="mb-2 text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
-                  AI deteksi {stable ? "· stabil" : "· menstabilkan…"}
-                  {capturing ? " · memproses…" : ""}
-                </p>
-                <div className="grid grid-cols-3 gap-1.5 rounded-xl bg-[var(--panel-deep)] p-2">
-                  {preview.map((color, i) => (
-                    <div
-                      key={i}
-                      className="aspect-square rounded-md"
-                      style={{
-                        background: colorHex(i === 4 ? faceMeta.center : color),
-                        boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.25)",
-                      }}
-                      title={COLOR_META[i === 4 ? faceMeta.center : color].label}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                {SCAN_ORDER.map((face, index) => {
-                  const meta = FACES.find((f) => f.id === face)!;
-                  const done = Boolean(captured[face]);
-                  const active = index === faceIndex;
-                  return (
-                    <button
-                      key={face}
-                      type="button"
-                      onClick={() => setFaceIndex(index)}
-                      className={`rounded-full border px-2.5 py-1 text-[11px] ${
-                        active
-                          ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--ink)]"
-                          : done
-                            ? "border-white/20 text-[var(--accent)]"
-                            : "border-white/10 text-[var(--muted)]"
-                      }`}
-                    >
-                      {meta.short}
-                      {done ? " ✓" : ""}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="rounded-xl border border-white/8 bg-white/[0.03] p-3 text-xs leading-relaxed text-[var(--muted)]">
-                AI on-device mengklasifikasi warna + menyeimbangkan 9 stiker per
-                warna di akhir scan. Jika `OPENAI_API_KEY` ada, tiap sisi bisa
-                diverifikasi OpenAI Vision.
-              </div>
-
-              <div className="flex flex-wrap gap-2">
+            {/* Sticky mobile action bar */}
+            <div className="z-20 shrink-0 border-t border-white/10 bg-[rgba(8,16,24,0.94)] px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md lg:hidden">
+              <div className="mx-auto flex max-w-md items-center gap-2">
                 <button
                   type="button"
-                  className="btn-secondary"
+                  className="btn-secondary !px-3 !py-2.5"
                   onClick={goPrev}
                   disabled={faceIndex === 0 || capturing}
+                  aria-label="Sisi sebelumnya"
                 >
-                  Sisi sebelumnya
+                  Prev
                 </button>
                 <button
                   type="button"
-                  className="btn-primary"
+                  className="btn-primary min-w-0 flex-1 shadow-[0_8px_24px_rgba(125,255,179,0.28)]"
                   onClick={() => void captureFace()}
                   disabled={capturing}
                 >
                   {capturing
-                    ? "AI memproses…"
+                    ? "Memproses…"
                     : faceIndex === SCAN_ORDER.length - 1
-                      ? "Capture & selesai"
-                      : "Capture sisi ini"}
+                      ? "Selesai"
+                      : "Capture"}
                 </button>
                 <button
                   type="button"
-                  className="btn-secondary"
+                  className="btn-secondary !px-3 !py-2.5"
                   onClick={goNext}
                   disabled={faceIndex === SCAN_ORDER.length - 1 || capturing}
+                  aria-label="Lewati sisi"
                 >
-                  Lewati
+                  Skip
                 </button>
               </div>
             </div>
-          </div>
+          </>
         )}
       </div>
     </div>
